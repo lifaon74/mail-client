@@ -1,8 +1,8 @@
 import { IEmailHeader } from './email-header.type';
 
 export interface ICreateEmailHeaderOptions {
-  key: string;
-  value: string;
+  key: string; // expected valid
+  value: string; // expected valid
 }
 
 export function createEmailHeader(

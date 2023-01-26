@@ -2,6 +2,9 @@ import { MIME_TYPE_TEXT_HTML_UTF8_CONSTANT } from '../../../../../../../../mime-
 import { createEmailHeaderContentType } from '../create-email-header-content-type';
 import { IEmailHeaderContentType } from '../email-header-content-type.type';
 
+/**
+ * @deprecated
+ */
 export const EMAIL_HEADER_CONTENT_TYPE_TEXT_HTML_UTF8_CONSTANT: IEmailHeaderContentType = createEmailHeaderContentType(
   MIME_TYPE_TEXT_HTML_UTF8_CONSTANT,
 );

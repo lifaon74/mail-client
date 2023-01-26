@@ -2,12 +2,13 @@ import { createEmailHeader } from '../../create-email-header';
 import { IEmailHeader } from '../../email-header.type';
 import { IEmailHeaderDate } from './email-header-date.type';
 import { formatDateToEmailDataDateHeader } from './functions/format-date-to-email-data-date-header';
+import { HEADER_DATE_KEY_NAME } from './header-date-key.contant';
 
 export function createEmailHeaderDate(
   _date: Date,
 ): IEmailHeaderDate {
   const parent: IEmailHeader = createEmailHeader({
-    key: 'Date',
+    key: HEADER_DATE_KEY_NAME,
     value: '',
   });
 
@@ -29,10 +30,4 @@ export function createEmailHeaderDate(
     getDate,
     toString,
   };
-}
-
-/*-----*/
-
-export function createEmailHeaderDateNow(): IEmailHeaderDate {
-  return createEmailHeaderDate(new Date());
 }

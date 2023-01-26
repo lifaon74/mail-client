@@ -2,12 +2,13 @@ import { IEmailContact } from '../../../../../../../email-contact/email-contact.
 import { createEmailHeader } from '../../create-email-header';
 import { IEmailHeader } from '../../email-header.type';
 import { IEmailHeaderSender } from './email-header-sender.type';
+import { HEADER_SENDER_KEY_NAME } from './header-sender-key.contant';
 
 export function createEmailHeaderSender(
   _sender: IEmailContact,
 ): IEmailHeaderSender {
   const parent: IEmailHeader = createEmailHeader({
-    key: 'Sender',
+    key: HEADER_SENDER_KEY_NAME,
     value: '',
   });
 

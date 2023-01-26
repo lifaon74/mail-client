@@ -1,4 +1,4 @@
-import { createEmailAddressFromString } from '../classes/email-address/create-email-address';
+import { createEmailAddressFromString } from '../classes/email-address/create-email-address-from-string';
 
 export function emailAddressDebug(): void {
   // const emailAddress = createEmailAddressFromString('a@b.com');

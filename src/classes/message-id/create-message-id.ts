@@ -30,12 +30,3 @@ export function createMessageId(
     toString,
   };
 }
-
-/*-----*/
-
-export function createMessageIdFromString(
-  input: string,
-): IMessageId {
-  throw 'TODO'; // TODO
-}
-

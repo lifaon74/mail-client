@@ -2,12 +2,13 @@ import { createEmailHeader } from '../../create-email-header';
 import { IEmailHeader } from '../../email-header.type';
 import { IContentTransferEncoding } from './content-transfer-encoding.type';
 import { IEmailHeaderContentTransferEncoding } from './email-header-content-transfer-encoding.type';
+import { HEADER_CONTENT_TRANSFER_ENCODING_KEY_NAME } from './header-content-transfer-encoding-key.contant';
 
 export function createEmailHeaderContentTransferEncoding(
   _contentTransferEncoding: IContentTransferEncoding,
 ): IEmailHeaderContentTransferEncoding {
   const parent: IEmailHeader = createEmailHeader({
-    key: 'Content-Transfer-Encoding',
+    key: HEADER_CONTENT_TRANSFER_ENCODING_KEY_NAME,
     value: '',
   });
 

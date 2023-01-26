@@ -1,9 +1,15 @@
+import { codecDebug } from './codec/codec.debug';
 import { emailDataDebug } from './email-data.debug';
-import { webSocketDebug } from './websocket.debug';
+import { streamDebug } from './stream/stream.debug';
+import { webSocketStreamDebug } from './web-socket/stream/web-socket-stream.debug';
+import { webSocketDebug } from './web-socket/websocket.debug';
 
 export function debug(): void {
   // emailAddressDebug();
   // mimeTypeDebug();
-  // emailDataDebug();
-  webSocketDebug();
+  emailDataDebug();
+  // webSocketDebug();
+  // streamDebug();
+  // webSocketStreamDebug();
+  // codecDebug();
 }

@@ -21,7 +21,7 @@ https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types
 export interface ICreateMimeTypeOptions {
   type: string; // expected valid
   subtype: string; // expected valid
-  parameters?: IMimeTypeParameterList,
+  parameters?: IMimeTypeParameterList;
 }
 
 export function createMimeType(
@@ -60,6 +60,10 @@ export function createMimeType(
     }
   };
 
+  const getTypeAndSubType = (): string => {
+    return `${_type}/${_subtype}`;
+  };
+
   const getParameters = (): IMimeTypeParameterList => {
     return _parameters;
   };
@@ -68,7 +72,7 @@ export function createMimeType(
     const parametersString: string = (_parameters.getSize() === 0)
       ? ''
       : `; ${_parameters.toString()}`;
-    return `${_type}/${_subtype}${parametersString}`;
+    return `${getTypeAndSubType()}${parametersString}`;
   };
 
   return {
@@ -76,6 +80,7 @@ export function createMimeType(
     setType,
     getSubType,
     setSubType,
+    getTypeAndSubType,
     getParameters,
     toString,
   };

@@ -1,0 +1,51 @@
+import { u8 } from '../number-types';
+
+/*---------*/
+
+interface IEncoderResult {
+  value: u8;
+  done: boolean;
+}
+
+interface IEncoder {
+  (): IEncoderResult;
+}
+
+interface ICreateEncoder<GInput> {
+  (
+    input: GInput,
+  ): IEncoder;
+}
+
+/*---------*/
+
+interface IDecoderResult<GOutput> {
+  value: GOutput;
+  done: boolean;
+}
+
+interface IDecoder<GOutput> {
+  (
+    input: u8,
+  ): IDecoderResult<GOutput>;
+}
+
+interface ICreateDecoder<GOutput> {
+  (): IDecoder<GOutput>;
+}
+
+/*---------*/
+
+function createTextEncoder(
+  input: string,
+): IEncoder {
+  return () => {
+
+  };
+}
+
+/*---------*/
+
+export async function codecDebug(): Promise<void> {
+
+}

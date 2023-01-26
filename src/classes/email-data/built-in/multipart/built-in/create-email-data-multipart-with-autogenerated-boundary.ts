@@ -16,7 +16,7 @@ import {
   createEmailHeaderContentType,
 } from '../../../components/header-list/components/header/built-in/content-type/create-email-header-content-type';
 import { IEmailHeader } from '../../../components/header-list/components/header/email-header.type';
-import { createEmailHeaderListFromIterable } from '../../../components/header-list/create-email-header-list';
+import { createEmailHeaderListFromIterable } from '../../../components/header-list/create-email-header-list-from-iterable';
 import { createEmailDataMultipart, IEmailDataMultipartContent } from '../create-email-data-multipart';
 import { IEmailDataMultipart } from '../email-data-multipart.type';
 

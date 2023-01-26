@@ -8,7 +8,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@lirx/core": "1.2.0-beta.1",
+    "@lirx/core": "1.2.0-beta.2",
+    "@lirx/utils": "1.0.0-beta.1",
+    "@lirx/promise": "1.0.0-beta.1",
     "@lifaon/number-types": "1.0.0",
     "@lifaon/traits": "3.0.0"
   },

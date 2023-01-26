@@ -1,5 +1,6 @@
 import { IEmailAddress } from '../../../classes/email-address/email-address.type';
-import { createEmailContact, createEmailContactFromString } from '../../../classes/email-contact/create-email-contact';
+import { createEmailContact } from '../../../classes/email-contact/create-email-contact';
+import { createEmailContactFromString } from '../../../classes/email-contact/create-email-contact-from-string';
 import { IEmailContact } from '../../../classes/email-contact/email-contact.type';
 import { isEmailContact } from '../../../classes/email-contact/is-email-contact';
 
