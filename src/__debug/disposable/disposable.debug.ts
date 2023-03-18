@@ -69,17 +69,18 @@ export interface IAsyncContextFunction<GDisposable, GReturn> {
   ): GReturn | Promise<GReturn>;
 }
 
-export async function asyncDisposableContext<GDisposable, GReturn>(
+export function asyncDisposableContext<GDisposable, GReturn>(
   acquire: IAsyncAcquireFunction<GDisposable>,
   context: IAsyncContextFunction<GDisposable, GReturn>,
   release: IAsyncReleaseFunction<GDisposable> = autoAsyncRelease,
 ): Promise<GReturn> {
-  const disposable: GDisposable = await acquire();
-  try {
-    return await context(disposable);
-  } finally {
-    await release(disposable);
-  }
+  return new Promise<GDisposable>((resolve) => resolve(acquire()))
+    .then((disposable: GDisposable): Promise<GReturn> => {
+      return new Promise<GReturn>((resolve) => resolve(context(disposable)))
+        .finally(() => {
+          return release(disposable);
+        });
+    });
 }
 
 export function autoAsyncRelease<GDisposable>(
@@ -114,7 +115,7 @@ export type IMultiAsyncReleaseFunctions<GDisposables extends readonly unknown[]>
   [GKey in keyof GDisposables]: IAsyncReleaseFunction<GDisposables[GKey]>;
 };
 
-export async function multiAsyncDisposableContext<GDisposables extends readonly unknown[], GReturn>(
+export function multiAsyncDisposableContext<GDisposables extends readonly unknown[], GReturn>(
   acquire: IMultiAsyncAcquireFunctions<GDisposables>,
   context: IAsyncContextFunction<GDisposables, GReturn>,
   release: IMultiAsyncReleaseFunctions<GDisposables> = Array.from({ length: acquire.length }, () => autoAsyncRelease) as IMultiAsyncReleaseFunctions<GDisposables>,
@@ -125,9 +126,9 @@ export async function multiAsyncDisposableContext<GDisposables extends readonly 
     ): Promise<GReturn> => {
       const index: number = disposables.length;
       if (index === acquire.length) {
-        return Promise.resolve(context(disposables as unknown as GDisposables));
+        return new Promise<GReturn>((resolve) => resolve(context(disposables as unknown as GDisposables)));
       } else {
-        return asyncDisposableContext(
+        return asyncDisposableContext<unknown, GReturn>(
           acquire[index],
           (
             disposable: unknown,
@@ -151,6 +152,21 @@ export async function multiAsyncDisposableContext<GDisposables extends readonly 
 }
 
 /*-------------------*/
+
+export function writableStreamDisposableContext<GValue, GReturn>(
+  writable: WritableStream<GValue>,
+  context: IAsyncContextFunction<WritableStreamDefaultWriter<GValue>, GReturn>,
+): Promise<GReturn> {
+  return multiAsyncDisposableContext<[WritableStream<GValue>, WritableStreamDefaultWriter<GValue>], GReturn>(
+    [
+      () => writable,
+      () => writable.getWriter(),
+    ],
+    ([, writer]): GReturn | Promise<GReturn> => {
+      return context(writer);
+    },
+  );
+}
 
 // export interface IReadableStreamGetReaderCallback<GValue, GReturn> {
 //   (

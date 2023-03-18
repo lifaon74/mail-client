@@ -7,9 +7,9 @@ import { webSocketDebug } from './web-socket/websocket.debug';
 export function debug(): void {
   // emailAddressDebug();
   // mimeTypeDebug();
-  emailDataDebug();
+  // emailDataDebug();
   // webSocketDebug();
   // streamDebug();
   // webSocketStreamDebug();
-  // codecDebug();
+  codecDebug();
 }

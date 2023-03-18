@@ -1,92 +1,155 @@
-import { IDefaultInNotificationsUnion, IObservable, singleN, fromWritableStream, toAsyncIterable } from '@lirx/core';
-import { readableStreamToAsyncIterable } from '../../functions/stream/readable-stream-to-async-iterable';
+import { readableStreamToAsyncIterable } from '@lirx/utils';
+import { u8 } from '@lifaon/number-types';
+import { writableStreamDisposableContext } from '../disposable/disposable.debug';
 
 /*---------*/
 
-type IByteEncoder = AsyncIterator<Uint8Array>;
+export interface IDecoder<GValue> {
+  readonly readable: ReadableStream<GValue>;
+  readonly writable: WritableStream<Uint8Array>;
+}
 
-// type IByteDecoder = AsyncIterator<Uint8Array>;
-
-interface ICreateEncoder<GInput> {
-  (
-    input: GInput,
-  ): IByteEncoder;
+export interface IEncoder<GValue> {
+  readonly readable: ReadableStream<Uint8Array>;
+  readonly writable: WritableStream<GValue>;
 }
 
 /*---------*/
 
+export type IIteratorEncoder<GValue> = Required<Iterator<Uint8Array, void, GValue>>;
+
+export type IIteratorByteEncoder<GValue> = Required<Iterator<u8, void, GValue>>;
+
 /*---------*/
 
-async function* createTextEncoder(
-  input: string,
-): AsyncGenerator<Uint8Array> {
-  yield new TextEncoder().encode(input);
+
+function encodeText(
+  input: string
+): Uint8Array {
+  return new TextEncoder().encode(input);
 }
 
+function * encodeTextAsBytes(
+  input: string
+): Generator<u8> {
+  yield * encodeText(input) as any;
+}
 
-//
-// async function* createTextDecoder(
-//   data$: IObservable<IDefaultInNotificationsUnion<Uint8Array>>,
-// ): AsyncGenerator<string> {
-//   const stream: TextDecoderStream = new TextDecoderStream();
-//
-//   data$(fromWritableStream(stream.writable));
-//
-//   const reader: ReadableStreamDefaultReader<string> = stream.readable.getReader();
-//
-//   let result: ReadableStreamReadResult<string>;
-//   while (!(result = await reader.read()).done) {
-//     yield result.value;
-//   }
-//
-//   // for await (const data of toAsyncIterable(data$)) {
-//   //   yield new TextDecoder().decode(data);
-//   // }
+// function *encodeText(
+//   input: string
+// ): Generator<Uint8Array> {
+//   return new TextEncoder().encode(input);
 // }
 
-function createTextDecoder(
-  data$: IObservable<IDefaultInNotificationsUnion<Uint8Array>>,
-): AsyncGenerator<string> {
-  const stream: TextDecoderStream = new TextDecoderStream();
 
-  data$(fromWritableStream(stream.writable));
-
-  return readableStreamToAsyncIterable(stream.readable);
+function *iteratorTextEncoder(): IIteratorEncoder<string> {
+  let out: Uint8Array = new Uint8Array(0);
+  while (true) {
+    out = encodeText(yield out);
+  }
 }
 
 /*---------*/
 
-/*
 
-CODEC:
-X Data IN
-Y Data OUT
-backpressure
+async function debugTextEncoderStream(): Promise<void> {
+  const encoder = new TextEncoderStream();
 
-encoder.read();
+  const write = () => {
+    return writableStreamDisposableContext(
+      encoder.writable,
+      async (writer: WritableStreamDefaultWriter<string>) => {
+        await writer.write('abc');
+      },
+    );
+  };
 
- */
+  const read = async () => {
+    for await (const data of readableStreamToAsyncIterable(encoder.readable)) {
+      console.log(data);
+    }
+  };
+
+  await Promise.all([read(), write()]);
+}
+
+async function debugTextDecoderStream(): Promise<void> {
+  const decoder = new TextDecoderStream();
+
+  const write = () => {
+    return writableStreamDisposableContext(
+      decoder.writable,
+      async (writer: WritableStreamDefaultWriter<Uint8Array>) => {
+        await writer.write(new Uint8Array([100, 101, 102]));
+      },
+    );
+  };
+
+  const read = async () => {
+    for await (const data of readableStreamToAsyncIterable(decoder.readable)) {
+      console.log(data);
+    }
+  };
+
+  await Promise.all([read(), write()]);
+}
+
+async function debugTextEncoderStream2(): Promise<void> {
+  const encoder = new TextEncoderStream();
+
+  const read = async () => {
+    const readable = new ReadableStream({
+      type: 'bytes',
+      start: (controller) => {
+        let i = 0;
+        setInterval(() => {
+          debugger;
+          i++;
+          if (controller.byobRequest) {
+            new Uint8Array(controller.byobRequest.view!.buffer)[0] = i;
+            controller.byobRequest.respond(1);
+          } else {
+            controller.enqueue(new Uint8Array([i]));
+          }
+        }, 1000)
+      },
+    });
+    const reader = readable.getReader({
+      mode: 'byob',
+    });
+
+    while(true) {
+      console.log(await reader.read(new Uint8Array(2)));
+    }
+
+    // for await (const data of readableStreamToAsyncIterable(encoder.readable)) {
+    //   console.log(data);
+    // }
+  };
+
+  await read();
+}
+
+
+export async function debugTextCodecStream(): Promise<void> {
+  await debugTextEncoderStream2();
+  // await debugTextEncoderStream();
+  // await debugTextDecoderStream();
+}
+
+/*---------*/
+
+async function debugTextEncoderIterator(): Promise<void> {
+  const encoder = iteratorTextEncoder();
+  encoder.next();
+  console.log(encoder.next('abc'));
+  encoder.return();
+}
+
 
 /*---------*/
 
 export async function codecDebug(): Promise<void> {
-  const encoder = createTextEncoder('abc');
-  for await (const data of encoder) {
-    console.log(data);
-  }
-
-  const decoder = createTextDecoder(singleN(new Uint8Array([100, 101, 102])));
-  for await (const data of decoder) {
-    console.log(data);
-  }
-
-  // while (encoder.encoding()) {
-  //   console.log(encoder.read());
-  // }
-
-  // while (!decoder.done()) {
-  //   encoder.write(8);
-  // }
-  // console.log(decoder.get());
-
+  // await debugTextCodecStream();
+  // await debugTextEncoderIterator();
 }
