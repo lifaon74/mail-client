@@ -1,4 +1,4 @@
-import { IEmailDataAttachment } from '../../../classes/email-data/built-in/attachment/email-data-attachment.type';
+import { IEmailDataAttachment } from '../../../classes/email-data/__old/built-in/attachment/email-data-attachment.type';
 
 export type IEmailAttachmentLike =
   | IEmailDataAttachment

@@ -1,4 +1,4 @@
-import { IMessageId } from '../../../classes/message-id/message-id.type';
+import { IMessageId } from '../../../classes/message-id/__old/message-id.type';
 
 export type IMessageIdLike =
   | IMessageId

@@ -1,8 +1,8 @@
-import { IEmailAddress } from '../../../classes/email-address/email-address.type';
-import { createEmailContact } from '../../../classes/email-contact/create-email-contact';
-import { createEmailContactFromString } from '../../../classes/email-contact/create-email-contact-from-string';
-import { IEmailContact } from '../../../classes/email-contact/email-contact.type';
-import { isEmailContact } from '../../../classes/email-contact/is-email-contact';
+import { IEmailAddress } from '../../../classes/__old/email-address/email-address.type';
+import { createEmailContact } from '../../../classes/__old/email-contact/__old/create-email-contact';
+import { createEmailContactFromString } from '../../../classes/__old/email-contact/__old/create-email-contact-from-string';
+import { IEmailContact } from '../../../classes/__old/email-contact/__old/email-contact.type';
+import { isEmailContact } from '../../../classes/__old/email-contact/__old/is-email-contact';
 
 export type IEmailContactLike =
   | IEmailContact

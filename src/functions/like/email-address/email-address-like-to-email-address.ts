@@ -1,5 +1,5 @@
-import { createEmailAddressFromString } from '../../../classes/email-address/create-email-address-from-string';
-import { IEmailAddress } from '../../../classes/email-address/email-address.type';
+import { createEmailAddressFromString } from '../../../classes/__old/email-address/implementations/functions/create-email-address-from-string';
+import { IEmailAddress } from '../../../classes/__old/email-address/email-address.type';
 
 export type IEmailAddressLike =
   | IEmailAddress

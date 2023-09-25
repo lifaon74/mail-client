@@ -1,38 +1,39 @@
-import { createMimeTypeParameterListFromIterable } from '../classes/mime-type/components/mime-type-parameter-list/create-mime-type-parameter-list';
-import { createSafeMimeType } from '../classes/mime-type/create-mime-type';
-import { IMimeType } from '../classes/mime-type/mime-type.type';
+import { MimeTypeClass } from '../classes/mime-type/mime-type.class';
+import { MimeTypeParameters } from '../classes/mime-type/mime-type-parameters.class';
 
 export function mimeTypeDebug(): void {
   // const data = new MimeTypeParameter(
-  //   MimeTypeParameterKey.fromString('abc'),
-  //   MimeTypeParameterValue.fromString('def'),
+  //   MimeTypeParameterKey.parse('abc'),
+  //   new MimeTypeParameterValue.parse('def'),
   // );
 
-  // console.log(createMimeTypeParameterKeyFromString('def').get());
+  // application/vnd.api+json
+  // console.log(new MimeTypeParameterKey('def').value);
+  //
+  // console.log(new MimeTypeParameterValue('def').quoted);
+  // console.log(new MimeTypeParameterValue('"def"').quoted);
+  // console.log(new MimeTypeParameterValue('"de\\"f"').quoted);
+  // console.log(new MimeTypeParameterValue('"de\\\\f"').quoted);
+  // console.log(new MimeTypeParameterValue('de"f').quoted);
+  // console.log(new MimeTypeParameterValue('"de"f"').quoted);
+  // console.log(new MimeTypeParameterValue('"de\\\\"f"').quoted);
 
-  // console.log(createMimeTypeParameterValueFromString('def').getQuoted());
-  // console.log(createMimeTypeParameterValueFromString('"def"').getQuoted());
-  // console.log(createMimeTypeParameterValueFromString('"de\\"f"').getQuoted());
-  // console.log(createMimeTypeParameterValueFromString('"de\\\\f"').getQuoted());
-  // console.log(createMimeTypeParameterValueFromString('de"f').getQuoted());
-  // console.log(createMimeTypeParameterValueFromString('"de"f"').getQuoted());
-  // console.log(createMimeTypeParameterValueFromString('"de\\\\"f"').getQuoted());
+  // console.log(MimeTypeParameter.parse('abc="def"').toString());
+  // console.log(MimeTypeParameter.parse('abc="a\\"h"').toString());
 
-  // console.log(createMimeTypeParameterFromString('abc="def"').toString());
-  // console.log(createMimeTypeParameterFromString('abc="a\\"h"').toString());
+  // console.log(new MimeTypeParameters('name="test.bin"').toString());
+  // console.log(new MimeTypeParameters('name="test\\".bin"; abc="def"; bob ').toString());
+  // console.log(new MimeTypeParameters('abc="def"; ghi').toString());
 
-  // console.log(createMimeTypeParameterListFromString('name="test.bin"').toString());
-  // console.log(createMimeTypeParameterListFromString('name="test\\".bin"; abc="def"; bob ').toString());
-  // console.log(createMimeTypeParameterListFromString('abc="def"; ghi').toString());
-
-  // console.log(createMimeTypeFromString('application/octet-stream; name="test.bin"'));
+  // console.log(new MimeTypeClass('application/octet-stream; name="test.bin"'));
+  console.log(new MimeTypeClass('application/vnd.api+json'));
 
   // console.log(MIME_TYPE_TEXT_PLAIN_UTF8_CONSTANT.toString());
 
   // const data: IMimeType = createMimeTypeFromParts(
   //   'multipart',
   //   'mixed',
-  //   createMimeTypeParameterListFromMimeTypeParameters([
+  //   createMimeTypeParametersFromMimeTypeParameters([
   //     generateMimeTypeParameterBoundary(),
   //   ]),
   // );
@@ -40,16 +41,16 @@ export function mimeTypeDebug(): void {
   // console.log(data.toString());
 
   // const data = MimeTypeMultipartAlternative.generate();
-  // const data = MimeType.fromString(`application/octet-stream; name="test.bin"`);
-  // const data = MimeTypeParameterList.fromString(`name="test.bin"`);
-  // const data = MimeTypeParameterList.fromString(`name="test\\".bin"; abc="def"; bob `);
-  // const data = MimeTypeParameterList.fromString(`abc="def"`);
-  // const data = MimeTypeParameterList.fromString(`abc="def"; ghi`);
-  // const data = MimeTypeParameterList.fromString(`abc="def" ;`);
-  // const data = MimeTypeParameterList.fromString(`abc="def`);
-  // const data = MimeTypeParameterList.fromString(`abc="def"; a=`);
-  // const data = MimeTypeParameterList.fromString(`name="test\\\\".bin"`);
-  // const data = MimeTypeParameterList.fromString(`name="test\\".bin"`);
+  // const data = new MimeTypeClass(`application/octet-stream; name="test.bin"`);
+  // const data = new MimeTypeParameters(`name="test.bin"`);
+  // const data = new MimeTypeParameters(`name="test\\".bin"; abc="def"; bob `);
+  // const data = new MimeTypeParameters(`abc="def"`);
+  // const data = new MimeTypeParameters(`abc="def"; ghi`);
+  // const data = new MimeTypeParameters(`abc="def" ;`);
+  // const data = new MimeTypeParameters(`abc="def`);
+  // const data = new MimeTypeParameters(`abc="def"; a=`);
+  // const data = new MimeTypeParameters(`name="test\\\\".bin"`);
+  // const data = new MimeTypeParameters(`name="test\\".bin"`);
 
   // console.log(data);
   // console.log(data.toString());

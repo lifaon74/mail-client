@@ -27,6 +27,11 @@ implementations:
 https://github.com/mscdex/node-imap
 https://www.npmjs.com/package/emailjs-imap-client
 
+## Content-Transfer-Encoding
+
+https://www.w3.org/Protocols/rfc1341/5_Content-Transfer-Encoding.html
+
+
 ## Test server
 
 https://ethereal.email/
