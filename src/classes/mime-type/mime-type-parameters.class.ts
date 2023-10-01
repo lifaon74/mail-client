@@ -1,169 +1,136 @@
-import {
-  IMimeTypeParameterListAstNode,
-} from '../../ast/mime-type/fragments/mime-type-parameter-list/mime-type-parameter-list-ast-node.type';
-import {
-  createMimeTypeParameterListFromGenericInput,
-  IMimeTypeParameterListGenericInput,
-} from '../../ast/mime-type/fragments/mime-type-parameter-list/create/create-mime-type-parameter-list-from-generic-input';
-import { serializeMimeTypeParameterList } from '../../ast/mime-type/fragments/mime-type-parameter-list/serialize-mime-type-parameter-list';
-import { Dedup } from '../../types/dedup.type';
-import {
-  IMimeTypeParameterAstNode,
-} from '../../ast/mime-type/fragments/mime-type-parameter-list/fragments/mime-type-parameter/mime-type-parameter-ast-node.type';
-import {
-  createMimeTypeParameterFromKeyValueStrings,
-} from '../../ast/mime-type/fragments/mime-type-parameter-list/fragments/mime-type-parameter/create/create-mime-type-parameter-from-key-value-strings';
+/** CONSTANTS **/
+
+const TOKEN_INNER_PATTERN = '0-9a-zA-Z\\!\\#\\$\\%\\&\'\\*\\+\\-\\.\\^_\\`\\|\\~';
+const TOKEN_PATTERN = `[${TOKEN_INNER_PATTERN}]`;
+
+const MIMETypeParameterKeyRegExp = new RegExp(`^${TOKEN_PATTERN}+$`);
+const MIMETypeParameterValueRegExp = new RegExp('^[\\u0009\\u0020-\\u007e]*$');
+const MIMETypeParameterValueRequiringQuotingRegExp = new RegExp(`[^${TOKEN_INNER_PATTERN}]`);
+
+const MIMETypeParameterRegExp = new RegExp(`;\s*(${TOKEN_PATTERN}+)=(?:"((?:[^"]|\\")+?)"|(${TOKEN_PATTERN}))`, 'g');
+
 
 /** TYPES **/
 
-export type IMimeTypeParametersInput = IMimeTypeParameterListGenericInput;
+export type IMIMETypeParameterTuple = [
+  key: string,
+  value: string,
+];
 
 /** CLASS **/
 
-export class MimeTypeParameters {
-  #ast: IMimeTypeParameterListAstNode;
+export class MIMETypeParameters {
+  readonly #parameters: Map<string, string>;
 
   constructor(
-    input: IMimeTypeParametersInput,
+    input: Iterable<IMIMETypeParameterTuple> | string = [],
   ) {
-    this.#ast = createMimeTypeParameterListFromGenericInput(input);
-  }
+    this.#parameters = new Map<string, string>();
 
-  /** ARRAY **/
+    if (typeof input === 'string') {
+      if (input !== '') {
+        let match: RegExpExecArray | null;
+        MIMETypeParameterRegExp.lastIndex = 0;
+        while ((match = MIMETypeParameterRegExp.exec(input)) !== null) {
+          // TODO continue here
 
-  #getParameterIndex(
-    key: string,
-    fromIndex: number = 0,
-  ): number {
-    for (const l: number = this.#ast.items.length; fromIndex < l; fromIndex++) {
-      const parameter: IMimeTypeParameterAstNode = this.#ast.items[fromIndex];
-      if (parameter.key.value === key) {
-        return fromIndex;
+          console.log(match);
+        }
       }
-    }
-    return -1;
-  }
-
-  #getParameter(
-    key: string,
-    fromIndex?: number,
-  ): IMimeTypeParameterAstNode | undefined {
-    const index: number = this.#getParameterIndex(key, fromIndex);
-    return (index === -1)
-      ? void 0
-      : this.#ast.items[index];
-  }
-
-  #setParameter(
-    parameter: IMimeTypeParameterAstNode,
-    dedup: Dedup = 'replace',
-  ): void {
-    const index: number = this.#getParameterIndex(parameter.key.value);
-    if (index === -1) {
-      this.#ast = {
-        ...this.#ast,
-        items: [
-          ...this.#ast.items,
-          parameter,
-        ],
-      };
     } else {
-      if (dedup === 'throw') {
-        throw new Error(`Parameter already exists`);
-      } else if (dedup === 'replace') {
-        this.#ast = {
-          ...this.#ast,
-          items: [
-            ...this.#ast.items.slice(0, index),
-            parameter,
-            ...this.#ast.items.slice(index + 1),
-          ],
-        };
-      } // skip => do nothing
+      const iterator: Iterator<IMIMETypeParameterTuple> = input[Symbol.iterator]();
+      let result: IteratorResult<IMIMETypeParameterTuple>;
+      while (!(result = iterator.next()).done) {
+        this.set(
+          result[0],
+          result[1],
+        );
+      }
     }
   }
 
   /** MAP **/
 
   get size(): number {
-    return this.#ast.items.length;
+    return this.#parameters.size;
   }
 
   has(
     key: string,
   ): boolean {
-    return this.#getParameterIndex(key) !== -1;
+    return this.#parameters.has(key.toLowerCase());
   }
 
   get(
     key: string,
   ): string | undefined {
-    const parameter: IMimeTypeParameterAstNode | undefined = this.#getParameter(key);
-
-    if (parameter === void 0) {
-      return void 0;
-    } else {
-      return parameter!.value.value;
-    }
+    return this.#parameters.get(key.toLowerCase());
   }
 
   set(
     key: string,
     value: string,
-    dedup?: Dedup,
   ): void {
-    this.#setParameter(
-      createMimeTypeParameterFromKeyValueStrings(key, value),
-      dedup,
-    );
+    if (MIMETypeParameterKeyRegExp.test(key)) {
+      if (MIMETypeParameterValueRegExp.test(value)) {
+        this.#parameters.set(key.toLowerCase(), value);
+      } else {
+        throw new Error(`Invalid parameter value`);
+      }
+    } else {
+      throw new Error(`Invalid parameter key`);
+    }
   }
 
   delete(
     key: string,
   ): boolean {
-    const index: number = this.#getParameterIndex(key);
-    if (index === -1) {
-      return false;
-    } else {
-      this.#ast = {
-        ...this.#ast,
-        items: [
-          ...this.#ast.items.slice(0, index),
-          ...this.#ast.items.slice(index + 1),
-        ],
-      };
-      return true;
-    }
+    return this.#parameters.delete(key.toLowerCase());
   }
 
   clear(): void {
-    this.#ast = {
-      ...this.#ast,
-      items: [],
-    };
+    this.#parameters.clear();
   }
 
-  * entries(): IterableIterator<[string, string]> {
-    for (let i: number = 0, l: number = this.#ast.items.length; i < l; i++) {
-      const parameter: IMimeTypeParameterAstNode = this.#ast.items[i];
-
-      yield [
-        parameter.key.value,
-        parameter.value.value,
-      ];
-    }
+  keys(): IterableIterator<string> {
+    return this.#parameters.keys();
   }
 
-  [Symbol.iterator](): IterableIterator<[string, string]> {
+  values(): IterableIterator<string> {
+    return this.#parameters.values();
+  }
+
+  entries(): IterableIterator<IMIMETypeParameterTuple> {
+    return this.#parameters.entries();
+  }
+
+  [Symbol.iterator](): IterableIterator<IMIMETypeParameterTuple> {
     return this.entries();
   }
 
-  toAst(): IMimeTypeParameterListAstNode {
-    return this.#ast;
-  }
-
   toString(): string {
-    return serializeMimeTypeParameterList(this.#ast);
+    let output: string = '';
+
+    const iterator: Iterator<IMIMETypeParameterTuple> = this.entries();
+    let result: IteratorResult<IMIMETypeParameterTuple>;
+    while (!(result = iterator.next()).done) {
+      const [key, value]: IMIMETypeParameterTuple = result.value;
+
+      if (output !== '') {
+        output += '; ';
+      }
+
+      const _value: string = MIMETypeParameterValueRequiringQuotingRegExp.test(value)
+        ? `"${
+          value
+            .replace('\\', '\\\\')
+            .replace('"', '\\"')
+        }"`
+        : value;
+
+      output += `${key}${(_value === '') ? '' : `=${_value}`}`;
+    }
+
+    return output;
   }
 }
-

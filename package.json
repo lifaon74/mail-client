@@ -13,12 +13,6 @@
     "clear:cache:lirx-dom": "node tools/clear-cache.mjs --lirx-dom",
     "reinstall": "rm -rf ./node_modules && rm -f ./yarn.lock && yarn install"
   },
-  "dependencies": {
-    "@lirx/core": "latest",
-    "@lirx/utils": "latest",
-    "@lifaon/number-types": "latest",
-    "@lifaon/traits": "3.0.0"
-  },
   "devDependencies": {
     "sass": "^1.62.0",
     "typescript": "^5.2.2",
