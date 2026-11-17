@@ -1,0 +1,44 @@
+import { formatDateToEmailDataDateHeader } from './functions/format-date-to-email-data-date-header';
+import { EMAIL_HEADER_DATE_KEY, IEmailHeaderDateKey } from './email-header-date-key.contant';
+import { convertEmailDataDateHeaderToDate } from './functions/convert-email-data-date-header-to-date';
+import { EmailHeader } from '../../email-header.class';
+
+export class EmailHeaderDate extends EmailHeader<IEmailHeaderDateKey> {
+  static now(): EmailHeaderDate {
+    return new EmailHeaderDate(new Date());
+  }
+
+  #date!: Date;
+
+  constructor(
+    date: Date | string,
+  ) {
+    super(EMAIL_HEADER_DATE_KEY, '');
+    
+    if (typeof date === 'string') {
+      this.value = date;
+    } else {
+      this.date = date;
+    }
+  }
+
+  override get value(): string {
+    return formatDateToEmailDataDateHeader(this.#date);
+  }
+
+  override set value(
+    value: string,
+  ) {
+    this.#date = convertEmailDataDateHeaderToDate(value);
+  }
+
+  get date(): Date {
+    return this.#date;
+  }
+
+  set date(
+    date: Date,
+  ) {
+    this.#date = date;
+  }
+}

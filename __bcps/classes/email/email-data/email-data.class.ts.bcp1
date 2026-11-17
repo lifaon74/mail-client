@@ -1,0 +1,52 @@
+import { IEmailBody } from '../email-body/email-body.type';
+import { EmailHeaders, IContentTransferEncoding } from '../email-headers/email-headers.class';
+import { EmailBodyText, EmailBodyMultipart } from '../email-body/email-body-text.class';
+
+/** CLASS **/
+
+export class EmailData {
+  readonly #headers: EmailHeaders;
+  readonly #body: IEmailBody;
+
+  constructor(
+    headers: EmailHeaders,
+    body: IEmailBody,
+  ) {
+    this.#headers = headers;
+    this.#body = body;
+  }
+
+  get headers(): EmailHeaders {
+    return this.#headers;
+  }
+
+  get body(): IEmailBody {
+    return this.#body;
+  }
+
+  #bodyToString(): string {
+    if (this.#body instanceof EmailBodyText) {
+      const contentTransferEncoding:  IContentTransferEncoding | undefined = this.#headers.getContentTransferEncoding();
+      if (contentTransferEncoding)
+      return this.#body.toString({
+        contentTransferEncoding: this.#headers.getContentTransferEncoding()!,
+      });
+    } else if (this.#body instanceof EmailBodyMultipart) {
+      return this.#body.toString({
+
+      });
+    } else {
+      throw new Error(`Unknown body type.`)
+    }
+  }
+
+  toString(): string {
+    return this.#headers.toString() + '\r\n'
+      + '\r\n'
+      + this.#bodyToString()
+      + '\r\n'
+      ;
+  }
+}
+
+

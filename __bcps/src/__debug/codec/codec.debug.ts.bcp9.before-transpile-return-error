@@ -1,0 +1,563 @@
+import { readableStreamToAsyncIterable } from '@lirx/utils';
+import { u8 } from '@lifaon/number-types';
+import { writableStreamDisposableContext } from '../disposable/disposable.debug';
+import { GrammarRule } from './grammar/grammar-rule/grammar-rule';
+import { GrammarConcat } from './grammar/grammar-concat/grammar-concat';
+import { GrammarByte } from './grammar/grammar-byte-sequence/grammar-byte';
+import {
+  CHAR_0,
+  CHAR_A_LOWER_CASE,
+  CHAR_B_LOWER_CASE,
+  CHAR_1,
+  CHAR_2,
+  CHAR_9,
+  CHAR_Z_LOWER_CASE, CHAR_Z_UPPER_CASE, CHAR_A_UPPER_CASE, CHAR_4, CHAR_3,
+} from '../../constants/chars/chars.constant';
+import { IGrammarAstNode } from './grammar/grammar/grammar-ast-node.type';
+import { Grammar } from './grammar/grammar/grammar';
+import { ILines } from '../../misc/lines/lines.type';
+import { linesToString } from '../../misc/lines/functions/lines-to-string';
+import { IGrammarRuleAstNode, isGrammarRuleAstNode } from './grammar/grammar-rule/grammar-rule-ast-node.type';
+import { GrammarAlternative } from './grammar/grammar-alternative/grammar-alternative';
+import { indentLines } from '../../misc/lines/functions/indent-lines';
+import { IGrammarAlternativeAstNode, isGrammarAlternativeAstNode } from './grammar/grammar-alternative/grammar-alternative-ast-node.type';
+import { IGrammarConcatAstNode, isGrammarConcatAstNode } from './grammar/grammar-concat/grammar-concat-ast-node.type';
+import { IGrammarExpressionAstNode } from './grammar/grammar-expression/grammar-expression-ast-node.type';
+import {
+  isGrammarRuleIdentifierAstNode,
+  IGrammarRuleIdentifierAstNode,
+} from './grammar/grammar-rule-identifier/grammar-rule-identifier-ast-node.type';
+import { GrammarRuleIdentifier } from './grammar/grammar-rule-identifier/grammar-rule-identifier';
+import { optimizeGrammarConcat } from './grammar/optimize/optimize-grammar-concat';
+import {
+  IGrammarByteSequenceAstNode,
+  isGrammarByteSequenceAstNode,
+} from './grammar/grammar-byte-sequence/grammar-byte-sequence-ast-node.type';
+import { optimizeGrammarAlternative } from './grammar/optimize/optimize-grammar-alternative';
+import { optimizeGrammar } from './grammar/optimize/optimize-grammar';
+import { optimizeGrammarExpression } from './grammar/optimize/optimize-grammar-expression';
+import { optimizeGrammarRule } from './grammar/optimize/optimize-grammar-rule';
+import { GrammarByteRange } from './grammar/grammar-byte-range/grammar-byte-range';
+import { IGrammarByteRangeAstNode, isGrammarByteRangeAstNode } from './grammar/grammar-byte-range/grammar-byte-range-ast-node.type';
+import { GrammarRepeat } from './grammar/grammar-repeat/grammar-repeat';
+import { GrammarRepeatFixed } from './grammar/grammar-repeat/grammar-repeat-fixed';
+import { IGrammarRepeatAstNode, isGrammarRepeatAstNode } from './grammar/grammar-repeat/grammar-repeat-ast-node.type';
+
+/*---------*/
+export type byte_t = number;
+
+export type IDecoderResult<GValue> = IteratorResult<void, GValue>;
+
+export type IDecoder<GValue> = Iterator<void, GValue, byte_t>;
+
+export interface IDecoderFactory<GValue> {
+  (): IDecoder<GValue>;
+}
+
+export type IDecoderGenerator<GValue> = Generator<void, GValue, byte_t>;
+
+export interface IDecoderIterable<GValue> {
+  [Symbol.iterator]: IDecoderFactory<GValue>;
+}
+
+export type IEncoder = Iterator<byte_t, void, void>;
+
+/*---------*/
+
+// export function textEncoder(
+//   input: string,
+// ): IEncoder {
+//   new TextEncoder().encode(input);
+// }
+
+/*---------*/
+
+/*
+tutorial: https://tomassetti.me/guide-parsing-algorithms-terminology/
+
+https://en.wikipedia.org/wiki/Backus%E2%80%93Naur_form
+https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form
+
+https://github.com/dhconnelly/prettybnf
+ */
+
+export interface IParseUint8ArrayToAstFunction {
+  (
+    buffer: Uint8Array,
+    index: number,
+  ): IParsedUint8ArrayAstNode | null;
+}
+
+export interface IParsedUint8ArrayAstNode {
+  readonly name: string;
+  readonly start: number;
+  readonly end: number;
+  readonly children: readonly IParsedUint8ArrayAstNode[];
+}
+
+export function generateRuleName(
+  name: string,
+): string {
+  return `rule_${name}`;
+}
+
+export function transpileGrammarAlternativeToJavascriptParseUint8ArrayToAstFunction(
+  {
+    expressions,
+  }: IGrammarAlternativeAstNode,
+): ILines {
+  return [
+    `(buffer, index) => {`,
+    ...indentLines([
+      ...expressions.flatMap((expression: IGrammarExpressionAstNode, index: number): ILines => {
+        return [
+          `{`,
+          ...indentLines([
+            `const result = (`,
+            ...indentLines([
+              ...transpileGrammarExpressionToJavascriptParseUint8ArrayToAstFunction(expression),
+            ]),
+            `)(buffer, index);`,
+            ``,
+            `if (result !== null) {`,
+            ...indentLines([
+              `return {`,
+              ...indentLines([
+                `name: 'alternative',`,
+                `start: index,`,
+                `end: result.end,`,
+                `children: [result],`,
+              ]),
+              `};`,
+            ]),
+            `}`,
+          ]),
+          `}`,
+          ``,
+        ];
+      }),
+      `return null;`,
+    ]),
+    `}`,
+  ];
+}
+
+export function transpileGrammarByteRangeToJavascriptParseUint8ArrayToAstFunction(
+  {
+    start,
+    end,
+  }: IGrammarByteRangeAstNode,
+): ILines {
+  return [
+    `(buffer, index) => {`,
+    ...indentLines([
+      `return (${start} <= buffer[index] && buffer[index] <= ${end})`,
+      ...indentLines([
+        `? {`,
+        ...indentLines([
+          `name: 'byte-range',`,
+          `start: index,`,
+          `end: index + 1,`,
+          `children: [],`,
+        ]),
+        `}`,
+        `: null;`,
+      ]),
+    ]),
+    `}`,
+  ];
+}
+
+export function transpileGrammarByteSequenceToJavascriptParseUint8ArrayToAstFunction(
+  {
+    bytes,
+  }: IGrammarByteSequenceAstNode,
+): ILines {
+  return [
+    `(buffer, index) => {`,
+    ...indentLines([
+      `return (`,
+      ...indentLines([
+        ...Array.from(bytes).flatMap((byte: number, index: number): ILines => {
+          return [
+            `${(index > 0) ? '&& ' : ''}(buffer[index + ${index}] === ${byte})`,
+          ];
+        }),
+      ]),
+      `) `,
+      ...indentLines([
+        `? {`,
+        ...indentLines([
+          `name: 'byte-sequence',`,
+          `start: index,`,
+          `end: index + ${bytes.length},`,
+          `children: [],`,
+        ]),
+        `}`,
+        `: null;`,
+      ]),
+    ]),
+    `}`,
+  ];
+}
+
+export function transpileGrammarConcatToJavascriptParseUint8ArrayToAstFunction(
+  {
+    expressions,
+  }: IGrammarConcatAstNode,
+): ILines {
+  return [
+    `(buffer, index) => {`,
+    ...indentLines([
+      `const children = new Array(${expressions.length});`,
+      `let _index = index;`,
+      ``,
+      // TODO improve with for-loop instead
+      ...expressions.flatMap((expression: IGrammarExpressionAstNode, index: number): ILines => {
+        return [
+          `{`,
+          ...indentLines([
+            `const result = (`,
+            ...indentLines([
+              ...transpileGrammarExpressionToJavascriptParseUint8ArrayToAstFunction(expression),
+            ]),
+            `)(buffer, _index);`,
+            ``,
+            `if (result === null) {`,
+            ...indentLines([
+              `return null;`,
+            ]),
+            `} else {`,
+            ...indentLines([
+              `children[${index}] = result;`,
+              `_index = result.end;`,
+            ]),
+            `}`,
+          ]),
+          `}`,
+          ``,
+        ];
+      }),
+      `return {`,
+      ...indentLines([
+        `name: 'concat',`,
+        `start: index,`,
+        `end: _index,`,
+        `children,`,
+      ]),
+      `};`,
+    ]),
+    `}`,
+  ];
+}
+
+export function transpileGrammarExpressionToJavascriptParseUint8ArrayToAstFunction(
+  node: IGrammarExpressionAstNode,
+): ILines {
+  if (isGrammarAlternativeAstNode(node)) {
+    return transpileGrammarAlternativeToJavascriptParseUint8ArrayToAstFunction(node);
+  } else if (isGrammarByteRangeAstNode(node)) {
+    return transpileGrammarByteRangeToJavascriptParseUint8ArrayToAstFunction(node);
+  } else if (isGrammarByteSequenceAstNode(node)) {
+    return transpileGrammarByteSequenceToJavascriptParseUint8ArrayToAstFunction(node);
+  } else if (isGrammarConcatAstNode(node)) {
+    return transpileGrammarConcatToJavascriptParseUint8ArrayToAstFunction(node);
+  } else if (isGrammarRepeatAstNode(node)) {
+    return transpileGrammarRepeatToJavascriptParseUint8ArrayToAstFunction(node);
+  } else if (isGrammarRuleIdentifierAstNode(node)) {
+    return transpileGrammarRuleIdentifierToJavascriptParseUint8ArrayToAstFunction(node);
+  } else {
+    throw new Error(`Unknown node: ${(node as any).__type__}`);
+  }
+}
+
+export function transpileGrammarRepeatToJavascriptParseUint8ArrayToAstFunction(
+  {
+    expression,
+    min,
+    max,
+  }: IGrammarRepeatAstNode,
+): ILines {
+  return [
+
+    `(buffer, index) => {`,
+    ...indentLines([
+      `let children = [];`,
+      `let _index = index;`,
+      ``,
+      `const expression = (`,
+      ...indentLines([
+        ...transpileGrammarExpressionToJavascriptParseUint8ArrayToAstFunction(expression),
+      ]),
+      `);`,
+      ``,
+      `for (let i = 0; i <= ${max}; i++) {`,
+      ...indentLines([
+        `const result = expression(buffer, _index);`,
+
+        `if (result === null) {`,
+        ...indentLines([
+          `if (${(min === max) ? `i === ${min}`:`(${min} <= i) && (i <= ${max})`}) {`,
+          ...indentLines([
+            `break;`,
+          ]),
+          `} else {`,
+          ...indentLines([
+            `return null;`,
+          ]),
+          `}`,
+        ]),
+        `} else {`,
+        ...indentLines([
+          `children.push(result);`,
+          `_index = result.end;`,
+        ]),
+        `}`,
+      ]),
+      `}`,
+
+      `return {`,
+      ...indentLines([
+        `name: 'repeat',`,
+        `start: index,`,
+        `end: _index,`,
+        `children,`,
+      ]),
+      `};`,
+    ]),
+    `}`,
+  ];
+}
+
+// export function transpileGrammarRuleToJavascriptParseUint8ArrayToAstFunction(
+//   {
+//     name,
+//     expression,
+//   }: IGrammarRuleAstNode,
+// ): ILines {
+//   return [
+//     `const rule_${name} = (`,
+//     ...indentLines([
+//       ...transpileGrammarExpressionToJavascriptParseUint8ArrayToAstFunction(expression)
+//     ]),
+//     `);`,
+//   ];
+// }
+//
+// export function transpileGrammarRuleIdentifierToJavascriptParseUint8ArrayToAstFunction(
+//   {
+//     name,
+//   }: IGrammarRuleIdentifierAstNode,
+// ): ILines {
+//   return [
+//     `(buffer, index) => {`,
+//     ...indentLines([
+//       `const result = rule_${name}(buffer, index);`,
+//       ``,
+//       `if (result === null) {`,
+//       ...indentLines([
+//         `return null;`,
+//       ]),
+//       `} else {`,
+//       ...indentLines([
+//         `return {`,
+//         ...indentLines([
+//           `name: ${JSON.stringify(`rule-identifier::${name}`)},`,
+//           `start: index,`,
+//           `end: result.end,`,
+//           `children: [result],`,
+//         ]),
+//         `};`,
+//       ]),
+//       `}`,
+//     ]),
+//     `}`,
+//   ];
+// }
+
+export function transpileGrammarRuleToJavascriptParseUint8ArrayToAstFunction(
+  {
+    name,
+    expression,
+  }: IGrammarRuleAstNode,
+): ILines {
+  return [
+    `const ${generateRuleName(name)} = (`,
+    ...indentLines([
+      `(buffer, index) => {`,
+      ...indentLines([
+        `const result = (`,
+        ...indentLines([
+          ...transpileGrammarExpressionToJavascriptParseUint8ArrayToAstFunction(expression),
+        ]),
+        `)(buffer, index);`,
+        ``,
+        `if (result === null) {`,
+        ...indentLines([
+          `return null;`,
+        ]),
+        `} else {`,
+        ...indentLines([
+          `return {`,
+          ...indentLines([
+            `name: ${JSON.stringify(`rule::${name}`)},`,
+            `start: index,`,
+            `end: result.end,`,
+            `children: [result],`,
+          ]),
+          `};`,
+        ]),
+        `}`,
+      ]),
+      `}`,
+    ]),
+    `)`,
+  ];
+}
+
+export function transpileGrammarRuleIdentifierToJavascriptParseUint8ArrayToAstFunction(
+  {
+    name,
+  }: IGrammarRuleIdentifierAstNode,
+): ILines {
+  return [
+    `(buffer, index) => {`,
+    ...indentLines([
+      `return ${generateRuleName(name)}(buffer, index);`,
+    ]),
+    `}`,
+  ];
+}
+
+export function transpileGrammarToJavascriptParseUint8ArrayToAstFunction(
+  {
+    rules,
+  }: IGrammarAstNode,
+): ILines {
+  return [
+    `(`,
+    ...indentLines([
+      `rules = new Map(),`,
+    ]),
+    `) => {`,
+    ...indentLines([
+      ...rules.flatMap((rule: IGrammarRuleAstNode): ILines => {
+        return [
+          ...transpileGrammarRuleToJavascriptParseUint8ArrayToAstFunction(rule),
+          `rules.set(${JSON.stringify(rule.name)}, ${generateRuleName(rule.name)});`,
+          ``,
+        ];
+      }),
+      `return rules;`,
+    ]),
+    `}`,
+  ];
+}
+
+/*---------*/
+
+// const buffer = [1, 2];
+// const a = ((b, i) => {
+//   return ((b, i) => b[i] === 5)(b, i)
+//     || ((b, i) => b[i] === 6)(b, i + 1)
+// })(buffer, 0);
+//
+// console.log(a);
+
+/*---------*/
+
+function grammarDebug1(): void {
+  const digit = GrammarRule('digit', GrammarByteRange(CHAR_0, CHAR_9));
+  const alpha_lowercase = GrammarRule('alpha_lowercase', GrammarAlternative([
+    GrammarByte(CHAR_A_LOWER_CASE),
+    GrammarByte(CHAR_B_LOWER_CASE),
+    GrammarRuleIdentifier('digit'),
+  ]));
+
+  const grammar = Grammar([
+    digit,
+    alpha_lowercase,
+  ]);
+  // console.log(grammar);
+
+  const optimizedGrammar = optimizeGrammar(grammar);
+
+  console.log(optimizedGrammar);
+
+  // console.log(optimizeGrammarConcat(GrammarConcat([GrammarByte(CHAR_0), GrammarByte(CHAR_1), GrammarByte(CHAR_2)])));
+  // console.log(optimizeGrammarAlternative(GrammarAlternative([GrammarByte(CHAR_0), GrammarByte(CHAR_1), GrammarByte(CHAR_2)])));
+  // console.log(optimizeGrammarRule(alpha_lowercase));
+  // console.log(optimizeGrammar(grammar));
+
+  // // const lines: ILines = transpileGrammarByteToJavascriptParseUint8ArrayToAstFunction(GrammarByte(CHAR_0));
+  // // const lines: ILines = transpileGrammarConcatToJavascriptParseUint8ArrayToAstFunction(GrammarConcat([GrammarByte(CHAR_0), GrammarByte(CHAR_1)]));
+  // // const lines: ILines = transpileGrammarAlternativeToJavascriptParseUint8ArrayToAstFunction(GrammarAlternative([GrammarByte(CHAR_0), GrammarByte(CHAR_1)]));
+  // const lines: ILines = transpileGrammarRuleToJavascriptParseUint8ArrayToAstFunction(digit);
+  // // const lines: ILines = transpileGrammarRuleToJavascriptParseUint8ArrayToAstFunction(alpha_lowercase);
+  // // const lines: ILines = transpileGrammarToJavascriptParseUint8ArrayToAstFunction(grammar);
+  //
+  // const code: string = linesToString(lines);
+  //
+  // console.log(code);
+  //
+  // const fnc = new Function('buffer', 'index', `return (${code})(buffer, index);`);
+  //
+  // console.log(fnc([CHAR_0, CHAR_1], 0));
+  // // console.log(fnc([CHAR_A_LOWER_CASE, CHAR_1], 0));
+}
+
+function grammarDebug2(): void {
+  const digit = GrammarRule('digit', GrammarByteRange(CHAR_0, CHAR_9));
+  // const digit5 = GrammarRule('digit5', GrammarRepeatFixed(GrammarRuleIdentifier('digit'), 5));
+  const digit5 = GrammarRule('digit5', GrammarRepeat(GrammarRuleIdentifier('digit'), 4, 5));
+  // const alpha_lower_case = GrammarRule('alpha_lower_case', GrammarByteRange(CHAR_A_LOWER_CASE, CHAR_Z_LOWER_CASE));
+  // const alpha_upper_case = GrammarRule('alpha_upper_case', GrammarByteRange(CHAR_A_UPPER_CASE, CHAR_Z_UPPER_CASE));
+
+  const grammar = Grammar([
+    digit,
+    digit5,
+    // alpha_lower_case,
+    // alpha_upper_case,
+  ]);
+
+  const optimizedGrammar = optimizeGrammar(grammar);
+
+  console.log(optimizedGrammar);
+
+  // console.log(optimizeGrammarConcat(GrammarConcat([GrammarByte(CHAR_0), GrammarByte(CHAR_1), GrammarByte(CHAR_2)])));
+  // console.log(optimizeGrammarAlternative(GrammarAlternative([GrammarByte(CHAR_0), GrammarByte(CHAR_1), GrammarByte(CHAR_2)])));
+  // console.log(optimizeGrammarRule(alpha_lowercase));
+  // console.log(optimizeGrammar(grammar));
+
+  // const lines: ILines = transpileGrammarByteToJavascriptParseUint8ArrayToAstFunction(GrammarByte(CHAR_0));
+  // const lines: ILines = transpileGrammarConcatToJavascriptParseUint8ArrayToAstFunction(GrammarConcat([GrammarByte(CHAR_0), GrammarByte(CHAR_1)]));
+  // const lines: ILines = transpileGrammarAlternativeToJavascriptParseUint8ArrayToAstFunction(GrammarAlternative([GrammarByte(CHAR_0), GrammarByte(CHAR_1)]));
+  // const lines: ILines = transpileGrammarRuleToJavascriptParseUint8ArrayToAstFunction(digit);
+  // const lines: ILines = transpileGrammarRuleToJavascriptParseUint8ArrayToAstFunction(alpha_lowercase);
+  const lines: ILines = transpileGrammarToJavascriptParseUint8ArrayToAstFunction(grammar);
+
+  const code: string = linesToString(lines);
+
+  console.log(code);
+
+  // const fnc = new Function('buffer', 'index', `return (${code})(buffer, index);`);
+  //
+  // console.log(fnc([CHAR_0, CHAR_1], 0));
+  // // console.log(fnc([CHAR_A_LOWER_CASE, CHAR_1], 0));
+
+  const fnc = new Function('rules', `return (${code})(rules);`);
+  const rules = fnc();
+  // console.log(rules);
+
+  // const tree = rules.get('digit')!([CHAR_0, CHAR_1], 0);
+  const tree = rules.get('digit5')!([CHAR_0, CHAR_1, CHAR_2, CHAR_3, CHAR_4], 0);
+
+  console.log(tree);
+}
+
+/*---------*/
+
+export async function codecDebug(): Promise<void> {
+  // grammarDebug1();
+  grammarDebug2();
+}

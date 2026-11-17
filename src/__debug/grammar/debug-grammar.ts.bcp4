@@ -1,0 +1,638 @@
+import { GrammarRule } from './ast/grammar-rule/grammar-rule';
+import { GrammarString } from './ast/grammar-byte-sequence-comparison/shortcuts/grammar-string';
+import { GrammarConcat } from './ast/grammar-concat/grammar-concat';
+import { Grammar } from './ast/grammar/grammar';
+import {
+  IGrammarByteSequenceComparisonAstNode,
+  isGrammarByteSequenceComparisonAstNode,
+} from './ast/grammar-byte-sequence-comparison/grammar-byte-sequence-comparison-ast-node.type';
+import { IAstNode } from '../../ast/ast-node.type';
+import {
+  isGrammarByteComparisonAndAstNode,
+  IGrammarByteComparisonAndAstNode,
+} from './ast/grammar-byte-sequence-comparison/comparisons/and/grammar-byte-comparison-and-ast-node.type';
+import {
+  IGrammarByteComparisonEqualsAstNode,
+  isGrammarByteComparisonEqualsAstNode,
+} from './ast/grammar-byte-sequence-comparison/comparisons/equals/grammar-byte-comparison-equals-ast-node.type';
+import {
+  IGrammarByteComparisonNotEqualsAstNode,
+  isGrammarByteComparisonNotEqualsAstNode,
+} from './ast/grammar-byte-sequence-comparison/comparisons/not-equals/grammar-byte-comparison-not-equals-ast-node.type';
+import {
+  IGrammarByteComparisonGreaterThanAstNode,
+  isGrammarByteComparisonGreaterThanAstNode,
+} from './ast/grammar-byte-sequence-comparison/comparisons/greater-than/grammar-byte-comparison-greater-than-ast-node.type';
+import {
+  IGrammarByteComparisonGreaterThanOrEqualsAstNode,
+  isGrammarByteComparisonGreaterThanOrEqualsAstNode,
+} from './ast/grammar-byte-sequence-comparison/comparisons/greater-than-or-equals/grammar-byte-comparison-greater-than-or-equals-ast-node.type';
+import {
+  IGrammarByteComparisonLowerThanAstNode,
+  isGrammarByteComparisonLowerThanAstNode,
+} from './ast/grammar-byte-sequence-comparison/comparisons/lower-than/grammar-byte-comparison-lower-than-ast-node.type';
+import {
+  IGrammarByteComparisonLowerThanOrEqualsAstNode,
+  isGrammarByteComparisonLowerThanOrEqualsAstNode,
+} from './ast/grammar-byte-sequence-comparison/comparisons/lower-than-or-equals/grammar-byte-comparison-lower-than-or-equals-ast-node.type';
+import {
+  IGrammarByteComparisonOrAstNode,
+  isGrammarByteComparisonOrAstNode,
+} from './ast/grammar-byte-sequence-comparison/comparisons/or/grammar-byte-comparison-or-ast-node.type';
+import {
+  IGrammarByteComparisonNotAstNode,
+  isGrammarByteComparisonNotAstNode,
+} from './ast/grammar-byte-sequence-comparison/comparisons/not/grammar-byte-comparison-not-ast-node.type';
+import {
+  IGrammarByteComparisonExpressionAstNode,
+} from './ast/grammar-byte-sequence-comparison/comparisons/grammar-byte-comparison-expression-ast-node.type';
+import { IGenericAstNode } from '../../ast/generic-ast-node.type';
+import { IGrammarExpressionAstNode } from './ast/grammar-expression/grammar-expression-ast-node.type';
+import { isGrammarAlternativeAstNode, IGrammarAlternativeAstNode } from './ast/grammar-alternative/grammar-alternative-ast-node.type';
+import { isGrammarConcatAstNode, IGrammarConcatAstNode } from './ast/grammar-concat/grammar-concat-ast-node.type';
+import { isGrammarEndAstNode } from './ast/grammar-end/grammar-end-ast-node.type';
+import { isGrammarRepeatAstNode } from './ast/grammar-repeat/grammar-repeat-ast-node.type';
+import { isGrammarRuleIdentifierAstNode } from './ast/grammar-rule-identifier/grammar-rule-identifier-ast-node.type';
+import { IGrammarRulesMap } from './types/grammar-rules-map.type';
+import { IGrammarRuleAstNode } from './ast/grammar-rule/grammar-rule-ast-node.type';
+import { IGrammarAstNode } from './ast/grammar/grammar-ast-node.type';
+import { GrammarAlternative } from './ast/grammar-alternative/grammar-alternative';
+import { INextFunction } from './next-function/next-function.type';
+import { singleValueNextFunction } from './next-function/single-value-next-function';
+import { EMPTY_NEXT_FUNCTION } from './next-function/empty-next-function';
+
+/*---------*/
+
+export function execGrammarByteComparisonEquals(
+  node: IGrammarByteComparisonEqualsAstNode,
+  value: number,
+): boolean {
+  return value === node.value;
+}
+
+export function execGrammarByteComparisonNotEquals(
+  node: IGrammarByteComparisonNotEqualsAstNode,
+  value: number,
+): boolean {
+  return value !== node.value;
+}
+
+export function execGrammarByteComparisonGreaterThan(
+  node: IGrammarByteComparisonGreaterThanAstNode,
+  value: number,
+): boolean {
+  return value > node.value;
+}
+
+export function execGrammarByteComparisonGreaterThanOrEquals(
+  node: IGrammarByteComparisonGreaterThanOrEqualsAstNode,
+  value: number,
+): boolean {
+  return value >= node.value;
+}
+
+export function execGrammarByteComparisonLowerThan(
+  node: IGrammarByteComparisonLowerThanAstNode,
+  value: number,
+): boolean {
+  return value < node.value;
+}
+
+export function execGrammarByteComparisonLowerThanOrEquals(
+  node: IGrammarByteComparisonLowerThanOrEqualsAstNode,
+  value: number,
+): boolean {
+  return value <= node.value;
+}
+
+export function execGrammarByteComparisonAnd(
+  node: IGrammarByteComparisonAndAstNode,
+  value: number,
+): boolean {
+  for (let i: number = 0, l: number = node.expressions.length; i < l; i++) {
+    if (!execGrammarByteComparisonExpression(node.expressions[i], value)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+export function execGrammarByteComparisonOr(
+  node: IGrammarByteComparisonOrAstNode,
+  value: number,
+): boolean {
+  for (let i: number = 0, l: number = node.expressions.length; i < l; i++) {
+    if (execGrammarByteComparisonExpression(node.expressions[i], value)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function execGrammarByteComparisonNot(
+  node: IGrammarByteComparisonNotAstNode,
+  value: number,
+): boolean {
+  return !execGrammarByteComparisonExpression(node.expression, value);
+}
+
+export function execGrammarByteComparisonExpression(
+  node: IGrammarByteComparisonExpressionAstNode,
+  value: number,
+): boolean {
+  if (isGrammarByteComparisonAndAstNode(node)) {
+    return execGrammarByteComparisonAnd(node, value);
+  } else if (isGrammarByteComparisonEqualsAstNode(node)) {
+    return execGrammarByteComparisonEquals(node, value);
+  } else if (isGrammarByteComparisonGreaterThanAstNode(node)) {
+    return execGrammarByteComparisonGreaterThan(node, value);
+  } else if (isGrammarByteComparisonGreaterThanOrEqualsAstNode(node)) {
+    return execGrammarByteComparisonGreaterThanOrEquals(node, value);
+  } else if (isGrammarByteComparisonLowerThanAstNode(node)) {
+    return execGrammarByteComparisonLowerThan(node, value);
+  } else if (isGrammarByteComparisonLowerThanOrEqualsAstNode(node)) {
+    return execGrammarByteComparisonLowerThanOrEquals(node, value);
+  } else if (isGrammarByteComparisonNotAstNode(node)) {
+    return execGrammarByteComparisonNot(node, value);
+  } else if (isGrammarByteComparisonNotEqualsAstNode(node)) {
+    return execGrammarByteComparisonNotEquals(node, value);
+  } else if (isGrammarByteComparisonOrAstNode(node)) {
+    return execGrammarByteComparisonOr(node, value);
+  } else {
+    throw new Error(`Unknown node: ${(node as IGenericAstNode).__type__}`);
+  }
+}
+
+/*-------------*/
+
+export interface IExecResultShared<GType extends string> extends IAstNode<GType> {
+  readonly start: number;
+  readonly end: number;
+}
+
+export interface IExecResultByteSequence extends IExecResultShared<'byte-sequence'> {
+
+}
+
+export interface IExecResultEnd extends IExecResultShared<'end'> {
+
+}
+
+export interface IExecResultAlternative extends IExecResultShared<'alternative'> {
+  readonly child: IExecResult;
+}
+
+export interface IExecResultConcat extends IExecResultShared<'concat'> {
+  readonly children: readonly IExecResult[];
+}
+
+export interface IExecResultRule extends IExecResultShared<'rule'> {
+  readonly name: string;
+  readonly child: IExecResult;
+}
+
+export type IExecResult =
+  | IExecResultByteSequence
+  | IExecResultEnd
+  | IExecResultAlternative
+  | IExecResultConcat
+  | IExecResultRule
+  ;
+
+// export type IExecResultNextFunction = INextFunction<IExecResult>;
+
+/*--*/
+
+export function onceNextFunction<GValue>(
+  next: INextFunction<GValue>,
+): INextFunction<GValue> {
+  return (): GValue | null => {
+    if (next === EMPTY_NEXT_FUNCTION) {
+      return null;
+    } else {
+      const value: GValue | null = next();
+      next = EMPTY_NEXT_FUNCTION;
+      return value;
+    }
+  };
+}
+
+export function mapNextFunction<GIn, GOut>(
+  next: INextFunction<GIn>,
+  map: (value: GIn) => GOut,
+): INextFunction<GOut> {
+  return (): GOut | null => {
+    const result: GIn | null = next();
+    return (result === null)
+      ? null
+      : map(result);
+  };
+}
+
+export function switchMapNextFunction<GIn, GOut>(
+  next: INextFunction<GIn>,
+  map: (value: GIn) => INextFunction<GOut>,
+): INextFunction<GOut> {
+  let _next: INextFunction<GOut> | null = EMPTY_NEXT_FUNCTION;
+
+  return (): GOut | null => {
+    while (_next !== null) {
+      const _result: GOut | null = _next();
+
+      if (_result === null) {
+        const result: GIn | null = next();
+        _next = (result === null)
+          ? null
+          : map(result);
+      } else {
+        return _result;
+      }
+    }
+
+    return null;
+  };
+}
+
+export function sequentialNextFunctions<GValue>(
+  nextFunctions: readonly INextFunction<GValue>[],
+): INextFunction<GValue> {
+  const length: number = nextFunctions.length;
+  let index: number = 0;
+  return (): GValue | null => {
+    while (index < length) {
+      const result: GValue | null = nextFunctions[index]();
+      if (result === null) {
+        index++;
+      } else {
+        return result;
+      }
+    }
+    return null;
+  };
+}
+
+export function parallelNextFunctions<GValue>(
+  nextFunctions: readonly INextFunction<GValue>[],
+  index: number = 0,
+  values: readonly GValue[] = [],
+): INextFunction<readonly GValue[]> {
+  if (index < nextFunctions.length) {
+    return switchMapNextFunction(
+      nextFunctions[index],
+      (
+        value: GValue,
+      ): INextFunction<readonly GValue[]> => {
+        return parallelNextFunctions(
+          nextFunctions,
+          index + 1,
+          [
+            ...values,
+            value,
+          ],
+        );
+      },
+    );
+  } else {
+    return singleValueNextFunction(values);
+  }
+}
+
+export function forEachNextFunction<GValue>(
+  next: INextFunction<GValue>,
+  callback: (value: GValue) => void,
+): void {
+  let value: GValue | null;
+  while ((value = next()) !== null) {
+    callback(value);
+  }
+}
+
+/*--*/
+
+// export function execGrammarByteSequenceComparison(
+//   node: IGrammarByteSequenceComparisonAstNode,
+//   buffer: Uint8Array,
+//   index: number,
+// ): IExecResultNextFunction {
+//   const length: number = node.expressions.length;
+//   if (buffer.length >= length) {
+//     for (let i: number = 0, j: number = index; i < length; i++, j++) {
+//       if (!execGrammarByteComparisonExpression(node.expressions[i], buffer[j])) {
+//         return EMPTY_NEXT_FUNCTION;
+//       }
+//     }
+//
+//     return singleValueNextFunction({
+//       __type__: 'byte-sequence',
+//       start: index,
+//       end: index + length,
+//     });
+//   } else {
+//     return EMPTY_NEXT_FUNCTION;
+//   }
+// }
+
+export function execGrammarByteSequenceComparison(
+  node: IGrammarByteSequenceComparisonAstNode,
+  buffer: Uint8Array,
+  index: number,
+): INextFunction<IExecResultByteSequence> {
+  return onceNextFunction((): IExecResultByteSequence | null => {
+    const expressions: readonly IGrammarByteComparisonExpressionAstNode[] = node.expressions;
+    const length: number = expressions.length;
+
+    if (buffer.length >= length) {
+      for (let i: number = 0, j: number = index; i < length; i++, j++) {
+        if (!execGrammarByteComparisonExpression(expressions[i], buffer[j])) {
+          return null;
+        }
+      }
+
+      return {
+        __type__: 'byte-sequence',
+        start: index,
+        end: index + length,
+      };
+    } else {
+      return null;
+    }
+  });
+}
+
+export function execGrammarEnd(
+  buffer: Uint8Array,
+  index: number,
+): INextFunction<IExecResultEnd> {
+  return onceNextFunction((): IExecResultEnd | null => {
+    if (index === buffer.length) {
+      return {
+        __type__: 'end',
+        start: index,
+        end: index,
+      };
+    } else {
+      return null;
+    }
+  });
+}
+
+export function execGrammarAlternative(
+  node: IGrammarAlternativeAstNode,
+  rules: IGrammarRulesMap,
+  buffer: Uint8Array,
+  index: number,
+): INextFunction<IExecResultAlternative> {
+  const expressions: readonly IGrammarExpressionAstNode[] = node.expressions;
+  const expressionsLength: number = expressions.length;
+  let expressionIndex: number = 0;
+
+  let _next: INextFunction<IExecResult> | null = EMPTY_NEXT_FUNCTION;
+
+  return (): IExecResultAlternative | null => {
+    while (_next !== null) {
+      const _result: IExecResult | null = _next();
+
+      if (_result === null) {
+        _next = (expressionIndex < expressionsLength)
+          ? execGrammarExpression(
+            expressions[expressionIndex++],
+            rules,
+            buffer,
+            index,
+          )
+          : null;
+      } else {
+        return {
+          __type__: 'alternative',
+          start: index,
+          end: _result.end,
+          child: _result,
+        };
+      }
+    }
+
+    return null;
+  };
+
+  // return switchMapNextFunction(
+  //   (): IExecResultNextFunction | null => {
+  //     return (expressionIndex < expressionsLength)
+  //       ? execGrammarExpression(
+  //         expressions[expressionIndex++],
+  //         rules,
+  //         buffer,
+  //         index,
+  //       )
+  //       : null;
+  //   },
+  //   (next: IExecResultNextFunction): IExecResultNextFunction => {
+  //     return next;
+  //   },
+  // );
+}
+
+export function execGrammarConcat(
+  node: IGrammarConcatAstNode,
+  rules: IGrammarRulesMap,
+  buffer: Uint8Array,
+  index: number,
+): IExecResultNextFunction {
+  const nextFunctions: IExecResultSuccessNextFunction[] = [];
+
+  for (let i = 0, li = node.expressions.length; i < li; i++) {
+    const expression: IGrammarExpressionAstNode = node.expressions[i];
+
+    const result: IExecResultNextFunction = execGrammarExpression(
+      expression,
+      rules,
+      buffer,
+      index,
+    );
+
+    if (result.__type__ === 'error') {
+      return {
+        __type__: 'error',
+        __subtype__: 'contact',
+        index: index,
+        error: result,
+      };
+    } else {
+      nextFunctions.push(result.next);
+    }
+  }
+
+  console.log(nextFunctions);
+  return {
+    __type__: 'success',
+    next: mapNextFunction(
+      parallelNextFunctions<IExecResult>(nextFunctions),
+      (
+        children: readonly IExecResult[],
+      ): IExecResult => {
+        return {
+          __type__: 'concat',
+          start: index,
+          end: (children.length === 0)
+            ? index
+            : children[children.length - 1].end,
+          children,
+        };
+      },
+    ),
+  };
+}
+
+export function execGrammarExpression(
+  node: IGrammarExpressionAstNode,
+  rules: IGrammarRulesMap,
+  buffer: Uint8Array,
+  index: number,
+): INextFunction<IExecResult> {
+  if (isGrammarAlternativeAstNode(node)) {
+    return execGrammarAlternative(
+      node,
+      rules,
+      buffer,
+      index,
+    );
+  } else if (isGrammarByteSequenceComparisonAstNode(node)) {
+    return execGrammarByteSequenceComparison(
+      node,
+      buffer,
+      index,
+    );
+  } else if (isGrammarConcatAstNode(node)) {
+    return execGrammarConcat(
+      node,
+      rules,
+      buffer,
+      index,
+    );
+  } else if (isGrammarEndAstNode(node)) {
+    return execGrammarEnd(
+      buffer,
+      index,
+    );
+  } else if (isGrammarRepeatAstNode(node)) {
+    throw 'TODO';
+    // return execGrammarRepeat(
+    //   node,
+    //   rules,
+    //   buffer,
+    //   index,
+    // );
+  } else if (isGrammarRuleIdentifierAstNode(node)) {
+    throw 'TODO';
+    // return execGrammarRuleIdentifier(
+    //   node,
+    //   rules,
+    //   buffer,
+    //   index,
+    // );
+  } else {
+    throw new Error(`Unknown node: ${(node as IGrammarExpressionAstNode).__type__}`);
+  }
+}
+
+export function execGrammarRule(
+  node: IGrammarRuleAstNode,
+  rules: IGrammarRulesMap,
+  buffer: Uint8Array,
+  index: number,
+): IExecResultNextFunction {
+  return mapNextFunction(
+    execGrammarExpression(
+      node.expression,
+      rules,
+      buffer,
+      index,
+    ),
+    (
+      result: IExecResult,
+    ): IExecResult => {
+      return {
+        __type__: 'rule',
+        name: node.name,
+        start: result.start,
+        end: result.end,
+        child: result,
+      };
+    },
+  );
+}
+
+export function execGrammar(
+  node: IGrammarAstNode,
+  rule: string,
+  buffer: Uint8Array,
+  index: number,
+): IExecResultNextFunction {
+  const rules: IGrammarRulesMap = new Map<string, IGrammarRuleAstNode>(
+    node.rules.map((rule: IGrammarRuleAstNode): [string, IGrammarRuleAstNode] => {
+      return [
+        rule.name,
+        rule,
+      ];
+    }),
+  );
+
+  return execGrammarRule(
+    rules.get(rule)!,
+    rules,
+    buffer,
+    index,
+  );
+}
+
+// doc: https://www.sonarsource.com/blog/vulnerable-regular-expressions-javascript/?ref=dailydev
+
+export function debugGrammar() {
+  // /.+b$/g
+  // /[^b]+b$/g
+
+  const test = GrammarRule('test', GrammarAlternative([
+    GrammarString('a'),
+    GrammarString('b'),
+  ]));
+
+  // const test = GrammarRule('test', GrammarConcat([
+  //   GrammarString('a'),
+  //   GrammarString('b'),
+  // ]));
+
+  // const test = GrammarRule('test', GrammarRepeatZeroOrMore(
+  //   GrammarByteRange(0, 255),
+  // ));
+
+  // const test = GrammarRule('test', GrammarConcat([
+  //   GrammarRepeatZeroOrMore(
+  //     GrammarByteRange(0, 255),
+  //   ),
+  //   // GrammarString('b'),
+  //   GrammarEnd,
+  // ]));
+
+  // const test = GrammarRule('test', GrammarAlternative([
+  //   GrammarString('b'),
+  //   GrammarString('a'),
+  // ]));
+
+  const _id = GrammarRule('test', GrammarConcat([
+    GrammarString('a'),
+    GrammarString('b'),
+  ]));
+
+  const grammar = Grammar([
+    test,
+  ]);
+
+  const str: string = `ab`;
+
+  const buffer = new TextEncoder().encode(str);
+
+  const next = execGrammar(grammar, 'test', buffer, 0);
+  forEachNextFunction(next, (result: IExecResult): void => {
+    console.log(result);
+  });
+}
+

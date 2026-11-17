@@ -1,7 +1,9 @@
-import { debugMimeType } from './mime-type/debug-mime-type';
 import { debugRegexp } from './regexp/debug-regexp';
+import { debugGrammar } from './grammar/debug-grammar';
+import { debugEmail } from './email/debug-email';
 
 export function debug(): void {
-  debugMimeType();
   // debugRegexp();
+  // debugGrammar();
+  debugEmail();
 }

@@ -14,8 +14,8 @@
     "reinstall": "rm -rf ./node_modules && rm -f ./yarn.lock && yarn install"
   },
   "devDependencies": {
-    "sass": "^1.62.0",
+    "sass": "^1.69.4",
     "typescript": "^5.2.2",
-    "vite": "^4.4.9"
+    "vite": "^4.5.0"
   }
 }
